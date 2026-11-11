@@ -1,0 +1,908 @@
+<!DOCTYPE html>
+<html lang="uz">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>COLDBEHACK MAX V4.2</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- FontAwesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Orbitron:wght@600;800;900&display=swap" rel="stylesheet">
+    
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        cold: {
+                            bg: '#060a12',
+                            card: '#0d1527',
+                            border: '#1e293b',
+                            cyan: '#00f2fe',
+                            blue: '#4facfe',
+                            accent: '#38bdf8'
+                        },
+                        linebet: {
+                            bg: '#06120b',
+                            card: '#0e2016',
+                            border: '#1b3827',
+                            green: '#00e676',
+                            emerald: '#10b981'
+                        }
+                    },
+                    fontFamily: {
+                        orbitron: ['Orbitron', 'sans-serif'],
+                        sans: ['Inter', 'sans-serif']
+                    }
+                }
+            }
+        }
+    </script>
+
+    <style>
+        * {
+            -webkit-tap-highlight-color: transparent;
+            user-select: none;
+            -webkit-user-select: none;
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #060a12;
+            color: #ffffff;
+            overflow-x: hidden;
+            min-height: 100vh;
+        }
+
+        .font-orbitron {
+            font-family: 'Orbitron', sans-serif;
+        }
+
+        /* CRITICAL FIX FOR CLICK & TOUCH EVENTS: Canvas layer strict background pointer pass-through */
+        #snow-canvas {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            pointer-events: none !important;
+            z-index: 1;
+        }
+
+        /* Interactive App Layer on Top */
+        #app-root {
+            position: relative;
+            z-index: 10;
+        }
+
+        /* Theme Cards Styling */
+        .cyber-card-cold {
+            background: linear-gradient(180deg, rgba(15, 23, 42, 0.95) 0%, rgba(8, 13, 26, 0.98) 100%);
+            border: 1px solid rgba(56, 189, 248, 0.35);
+            box-shadow: 0 10px 30px -5px rgba(0, 242, 254, 0.25);
+            backdrop-filter: blur(12px);
+        }
+
+        .cyber-card-linebet {
+            background: linear-gradient(180deg, rgba(14, 32, 22, 0.95) 0%, rgba(6, 18, 11, 0.98) 100%);
+            border: 1px solid rgba(16, 185, 129, 0.35);
+            box-shadow: 0 10px 30px -5px rgba(0, 230, 118, 0.25);
+            backdrop-filter: blur(12px);
+        }
+
+        /* Glowing Buttons */
+        .btn-cold-glow {
+            background: linear-gradient(90deg, #00c6ff 0%, #0072ff 100%);
+            box-shadow: 0 0 20px rgba(0, 198, 255, 0.5);
+            transition: transform 0.1s ease, box-shadow 0.1s ease;
+        }
+        .btn-cold-glow:active {
+            transform: scale(0.96);
+            box-shadow: 0 0 10px rgba(0, 198, 255, 0.8);
+        }
+
+        .btn-linebet-glow {
+            background: linear-gradient(90deg, #00e676 0%, #00897b 100%);
+            box-shadow: 0 0 20px rgba(0, 230, 118, 0.5);
+            transition: transform 0.1s ease, box-shadow 0.1s ease;
+        }
+        .btn-linebet-glow:active {
+            transform: scale(0.96);
+            box-shadow: 0 0 10px rgba(0, 230, 118, 0.8);
+        }
+
+        /* Toast Popup Animation */
+        @keyframes toastUp {
+            0% { transform: translate(-50%, 100px); opacity: 0; }
+            20% { transform: translate(-50%, 0); opacity: 1; }
+            80% { transform: translate(-50%, 0); opacity: 1; }
+            100% { transform: translate(-50%, 100px); opacity: 0; }
+        }
+        .toast-show {
+            animation: toastUp 2.4s ease-in-out forwards;
+        }
+
+        /* Signal Highlight Effect */
+        @keyframes goldPulse {
+            0%, 100% { box-shadow: 0 0 12px rgba(250, 204, 21, 0.8); transform: scale(1.02); }
+            50% { box-shadow: 0 0 22px rgba(250, 204, 21, 1); transform: scale(1.05); }
+        }
+        .signal-win {
+            border: 2px solid #facc15 !important;
+            animation: goldPulse 1.2s infinite ease-in-out;
+            z-index: 20;
+        }
+    </style>
+</head>
+<body id="body-main" class="bg-cold-bg text-slate-100 min-h-screen">
+
+    <!-- Canvas Background for Snow & Cold Wind Animation -->
+    <canvas id="snow-canvas"></canvas>
+
+    <!-- Toast Notification -->
+    <div id="toast" class="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 hidden bg-slate-900 border border-emerald-500/50 text-emerald-400 px-5 py-2.5 rounded-full shadow-2xl text-xs font-bold flex items-center space-x-2">
+        <i class="fa-solid fa-circle-check"></i>
+        <span id="toast-msg">Promokod nusxalandi!</span>
+    </div>
+
+    <!-- MAIN APP CONTAINER -->
+    <div id="app-root" class="max-w-md mx-auto min-h-screen flex flex-col justify-between p-4">
+
+        <!-- ===================================== -->
+        <!-- 1. LOGIN SCREEN (Authentic to Screenshots) -->
+        <!-- ===================================== -->
+        <div id="screen-login" class="flex-1 flex flex-col justify-center py-6">
+            
+            <!-- Branding Header -->
+            <div class="text-center mb-6">
+                <div class="inline-block px-3.5 py-1 rounded-full bg-cyan-950/70 border border-cyan-500/40 text-cyan-400 font-orbitron text-[10px] tracking-wider mb-2" id="badge-version">
+                    V4.2 OFFICIAL HACK
+                </div>
+                <h1 class="text-3xl font-black font-orbitron tracking-wide text-transparent bg-clip-text bg-gradient-to-r from-cyan-300 via-sky-200 to-blue-400 drop-shadow-[0_2px_12px_rgba(0,242,254,0.4)]">
+                    COLDBEHACK MAX
+                </h1>
+                <p class="text-xs font-extrabold uppercase tracking-widest mt-1">
+                    <span class="text-sky-400 font-orbitron" id="dev-tag">POWERED BY THEEAGLE</span>
+                </p>
+            </div>
+
+            <!-- Login Box Container -->
+            <div id="login-card" class="cyber-card-cold rounded-2xl p-5 space-y-5 transition-all">
+                
+                <!-- Promokod Box -->
+                <div class="bg-slate-950/80 border border-yellow-500/30 rounded-xl p-3 flex items-center justify-between">
+                    <div class="flex items-center space-x-3">
+                        <div class="w-9 h-9 rounded-lg bg-yellow-500/20 text-yellow-400 flex items-center justify-center text-lg">
+                            <i class="fa-solid fa-gift"></i>
+                        </div>
+                        <div>
+                            <span class="text-[10px] text-slate-400 font-bold uppercase tracking-wider block">PROMOKOD</span>
+                            <span class="text-lg font-black font-orbitron text-yellow-400" id="promo-val">MUZZ</span>
+                        </div>
+                    </div>
+                    <button type="button" onclick="copyPromo()" class="bg-yellow-500/20 hover:bg-yellow-500/30 border border-yellow-500/50 text-yellow-400 px-3.5 py-1.5 rounded-lg text-xs font-bold transition active:scale-95 flex items-center space-x-1.5">
+                        <i class="fa-regular fa-copy"></i>
+                        <span>Nusxalash</span>
+                    </button>
+                </div>
+
+                <!-- Input: Account ID -->
+                <div>
+                    <label class="block text-[11px] font-bold text-slate-300 uppercase tracking-wider mb-2">
+                        ID RAQAMINGIZNI KIRITING
+                    </label>
+                    <div class="relative">
+                        <div class="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-sky-400">
+                            <i class="fa-regular fa-id-card"></i>
+                        </div>
+                        <input type="number" id="input-id" placeholder="Masalan: 48291039" 
+                            class="w-full bg-slate-950/90 border border-slate-700/80 focus:border-sky-400 text-white placeholder-slate-500 rounded-xl py-3 pl-10 pr-4 text-sm font-semibold outline-none transition">
+                    </div>
+                    <p id="error-id" class="hidden text-red-400 text-xs font-semibold mt-1.5 flex items-center space-x-1">
+                        <i class="fa-solid fa-circle-xmark"></i>
+                        <span>Hisob (ID) raqami noto'g'ri!</span>
+                    </p>
+                </div>
+
+                <!-- Input: Key -->
+                <div>
+                    <label class="block text-[11px] font-bold text-slate-300 uppercase tracking-wider mb-2">
+                        FAOLLASHTIRISH KALITI (KEY)
+                    </label>
+                    <div class="relative">
+                        <div class="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-sky-400">
+                            <i class="fa-solid fa-key"></i>
+                        </div>
+                        <input type="text" id="input-key" placeholder="KALITNI KIRITING..." 
+                            class="w-full bg-slate-950/90 border border-slate-700/80 focus:border-sky-400 text-white placeholder-slate-500 rounded-xl py-3 pl-10 pr-4 text-sm font-semibold uppercase outline-none transition">
+                    </div>
+                    <p id="error-key" class="hidden text-red-400 text-xs font-semibold mt-1.5 flex items-center space-x-1">
+                        <i class="fa-solid fa-circle-xmark"></i>
+                        <span>Kiritilgan kalit noto'g'ri! (Coldbet: MUZZ / Linebet: BE127)</span>
+                    </p>
+                </div>
+
+                <!-- Platform Switcher -->
+                <div>
+                    <label class="block text-[11px] font-bold text-slate-400 uppercase tracking-wider mb-2 text-center">
+                        PLATFORMANI TANLANG
+                    </label>
+                    <div class="grid grid-cols-2 gap-3">
+                        <button type="button" id="btn-switch-coldbet" onclick="selectPlatform('COLDBET')" 
+                            class="p-3 rounded-xl border-2 border-sky-400 bg-sky-500/10 text-sky-300 font-bold font-orbitron text-xs flex items-center justify-center space-x-2 transition">
+                            <i id="radio-cold" class="fa-solid fa-circle-dot text-sky-400"></i>
+                            <span>COLDBET</span>
+                        </button>
+                        <button type="button" id="btn-switch-linebet" onclick="selectPlatform('LINEBET')" 
+                            class="p-3 rounded-xl border border-slate-800 bg-slate-950/50 text-slate-400 font-bold font-orbitron text-xs flex items-center justify-center space-x-2 transition">
+                            <i id="radio-line" class="fa-regular fa-circle text-slate-600"></i>
+                            <span>LINEBET</span>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Submit Button -->
+                <button type="button" onclick="performLogin()" id="btn-login-submit" 
+                    class="w-full py-3.5 rounded-xl font-orbitron font-extrabold text-sm uppercase tracking-wider text-white btn-cold-glow flex items-center justify-center space-x-2 mt-2">
+                    <i class="fa-solid fa-shield-halved"></i>
+                    <span>XAVFSIZ KIRISH</span>
+                </button>
+
+            </div>
+
+            <div class="text-center text-[11px] text-slate-500 font-medium mt-6">
+                © 2026 COLDBEHACK V4. All rights reserved.
+            </div>
+        </div>
+
+        <!-- ===================================== -->
+        <!-- 2. MAIN DASHBOARD SCREEN (7 GAMES) -->
+        <!-- ===================================== -->
+        <div id="screen-dashboard" class="hidden flex-1 flex flex-col space-y-4 py-2">
+            
+            <!-- Dashboard Header Bar -->
+            <div class="flex items-center justify-between bg-slate-900/90 border border-slate-800 p-2.5 rounded-2xl">
+                <div class="flex items-center space-x-2">
+                    <button type="button" onclick="logout()" class="w-8 h-8 rounded-lg bg-slate-800 text-slate-400 flex items-center justify-center">
+                        <i class="fa-solid fa-gear text-xs"></i>
+                    </button>
+                    <div class="flex items-center space-x-1 px-2.5 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 text-[11px] font-bold">
+                        <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+                        <span>Online</span>
+                    </div>
+                </div>
+
+                <div id="dash-platform-title" class="font-orbitron font-black text-sm text-cyan-400 tracking-wider">
+                    COLDBET
+                </div>
+
+                <div class="flex items-center space-x-2">
+                    <div class="px-2 py-1 rounded-lg bg-slate-800 text-xs font-bold text-slate-300 flex items-center space-x-1">
+                        <i class="fa-solid fa-globe text-[10px] text-sky-400"></i>
+                        <span>UZ</span>
+                    </div>
+                    <button type="button" onclick="logout()" class="w-8 h-8 rounded-lg bg-red-500/10 text-red-400 flex items-center justify-center">
+                        <i class="fa-solid fa-right-from-bracket text-xs"></i>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Active Promo Banner -->
+            <div class="bg-slate-900/90 border-l-4 border-l-yellow-400 border border-slate-800 rounded-2xl p-3 flex items-center justify-between">
+                <div class="flex items-center space-x-3">
+                    <div class="w-9 h-9 rounded-xl bg-yellow-500/20 text-yellow-400 flex items-center justify-center text-base">
+                        <i class="fa-solid fa-bolt"></i>
+                    </div>
+                    <div>
+                        <span class="text-[9px] text-slate-400 font-bold uppercase tracking-widest block">FAOL PROMOKOD</span>
+                        <span id="dash-promo-code" class="text-base font-black font-orbitron text-yellow-400">MUZZ</span>
+                    </div>
+                </div>
+                <button type="button" onclick="copyPromo()" class="bg-yellow-500/20 text-yellow-400 px-3.5 py-1.5 rounded-xl text-xs font-bold flex items-center space-x-1">
+                    <i class="fa-regular fa-copy"></i>
+                    <span>Copya</span>
+                </button>
+            </div>
+
+            <!-- 6 Main Game Cards Grid -->
+            <div class="grid grid-cols-2 gap-3">
+                <div onclick="openGame('apple')" class="bg-slate-900/80 border border-slate-800 hover:border-sky-400/50 rounded-2xl p-4 flex flex-col items-center justify-center text-center cursor-pointer space-y-2 active:scale-95 transition">
+                    <div class="w-13 h-13 rounded-2xl bg-slate-800/80 flex items-center justify-center text-3xl">🍎</div>
+                    <span class="font-bold text-xs text-slate-200 font-orbitron">Apple</span>
+                </div>
+
+                <div onclick="openGame('thimbles')" class="bg-slate-900/80 border border-slate-800 hover:border-sky-400/50 rounded-2xl p-4 flex flex-col items-center justify-center text-center cursor-pointer space-y-2 active:scale-95 transition">
+                    <div class="w-13 h-13 rounded-2xl bg-slate-800/80 flex items-center justify-center text-3xl">🔔</div>
+                    <span class="font-bold text-xs text-slate-200 font-orbitron">Thimbles</span>
+                </div>
+
+                <div onclick="openGame('mines')" class="bg-slate-900/80 border border-slate-800 hover:border-sky-400/50 rounded-2xl p-4 flex flex-col items-center justify-center text-center cursor-pointer space-y-2 active:scale-95 transition">
+                    <div class="w-13 h-13 rounded-2xl bg-slate-800/80 flex items-center justify-center text-3xl">💎</div>
+                    <span class="font-bold text-xs text-slate-200 font-orbitron">Mines 💎</span>
+                </div>
+
+                <div onclick="openGame('wwg')" class="bg-slate-900/80 border border-slate-800 hover:border-sky-400/50 rounded-2xl p-4 flex flex-col items-center justify-center text-center cursor-pointer space-y-2 active:scale-95 transition">
+                    <div class="w-13 h-13 rounded-2xl bg-slate-800/80 flex items-center justify-center text-3xl">🤠</div>
+                    <span class="font-bold text-xs text-slate-200 font-orbitron">Wild West Gold</span>
+                </div>
+
+                <div onclick="openGame('kamikaze')" class="bg-slate-900/80 border border-slate-800 hover:border-sky-400/50 rounded-2xl p-4 flex flex-col items-center justify-center text-center cursor-pointer space-y-2 active:scale-95 transition">
+                    <div class="w-13 h-13 rounded-2xl bg-slate-800/80 flex items-center justify-center text-3xl">✈️</div>
+                    <span class="font-bold text-xs text-slate-200 font-orbitron">Kamikaze</span>
+                </div>
+
+                <div onclick="openGame('swamp')" class="bg-slate-900/80 border border-slate-800 hover:border-sky-400/50 rounded-2xl p-4 flex flex-col items-center justify-center text-center cursor-pointer space-y-2 active:scale-95 transition">
+                    <div class="w-13 h-13 rounded-2xl bg-slate-800/80 flex items-center justify-center text-3xl">🐸</div>
+                    <span class="font-bold text-xs text-slate-200 font-orbitron">Swamp Land</span>
+                </div>
+            </div>
+
+            <!-- Game 7: Aviator Predictor Card -->
+            <div onclick="openGame('aviator')" class="bg-gradient-to-br from-slate-900 to-red-950/40 border border-red-500/30 rounded-2xl p-4 space-y-3 cursor-pointer active:scale-98 transition">
+                <div class="text-center space-y-1">
+                    <div class="flex items-center justify-center space-x-2 font-orbitron font-black text-red-400 text-base">
+                        <span>✈️</span>
+                        <span>AVIATOR Predictor</span>
+                    </div>
+                    <p class="text-slate-400 text-[11px]">Sun'iy intellekt tahlili asosida Aviator signalini oling</p>
+                </div>
+                <button type="button" class="w-full py-3 rounded-xl bg-gradient-to-r from-red-600 to-rose-700 text-white font-orbitron font-extrabold text-xs uppercase tracking-wider shadow-lg flex items-center justify-center space-x-2">
+                    <i class="fa-solid fa-bolt"></i>
+                    <span>SIGNAL OLISH</span>
+                </button>
+            </div>
+
+            <!-- Telegram Links Footer -->
+            <div class="pt-2">
+                <div class="flex items-center justify-between text-xs text-slate-400 px-2 py-2 border-t border-slate-800/80">
+                    <a href="https://t.me/MUZZCOLD" target="_blank" class="flex items-center space-x-1.5 hover:text-sky-400 font-medium">
+                        <i class="fa-brands fa-telegram text-sky-400 text-sm"></i>
+                        <span>Telegram</span>
+                    </a>
+                    
+                    <a href="https://t.me/ZYNEX2_x27" target="_blank" class="flex items-center space-x-1.5 hover:text-sky-400 font-medium">
+                        <i class="fa-solid fa-user-gear text-sky-400 text-xs"></i>
+                        <span>Admin Support</span>
+                    </a>
+
+                    <div class="flex items-center space-x-1 font-semibold text-emerald-400 text-[11px]">
+                        <span class="w-2 h-2 rounded-full bg-emerald-400"></span>
+                        <span>Bot faol: 95%</span>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+
+        <!-- ===================================== -->
+        <!-- 3. INTERACTIVE GAME DISPLAY SCREEN -->
+        <!-- ===================================== -->
+        <div id="screen-game" class="hidden flex-1 flex flex-col justify-between py-2">
+            
+            <!-- Game Top Nav Bar -->
+            <div class="flex items-center justify-between bg-slate-900/90 border border-slate-800 p-2.5 rounded-2xl mb-3">
+                <button type="button" onclick="closeGame()" class="px-3 py-1.5 rounded-xl bg-sky-500/20 border border-sky-500/40 text-sky-300 font-bold text-xs flex items-center space-x-1.5">
+                    <i class="fa-solid fa-arrow-left"></i>
+                    <span>Orqaga</span>
+                </button>
+                <div id="game-title" class="font-orbitron font-black text-xs text-white">
+                    GAME TITLE
+                </div>
+                <div class="px-2 py-1 rounded-lg bg-emerald-500/10 text-emerald-400 text-[10px] font-bold border border-emerald-500/30">
+                    ● Online
+                </div>
+            </div>
+
+            <!-- Dynamic Playground Container -->
+            <div id="game-playground" class="flex-1 flex flex-col justify-center items-center">
+                <!-- Inner game HTML injected dynamically -->
+            </div>
+
+            <!-- Generate Signal Action Button -->
+            <div class="mt-4">
+                <button type="button" id="btn-generate-signal" onclick="triggerSignal()" class="w-full py-4 rounded-xl font-orbitron font-extrabold text-sm tracking-wider text-white btn-cold-glow uppercase flex items-center justify-center space-x-2">
+                    <i class="fa-solid fa-bolt"></i>
+                    <span>SIGNAL OLISH</span>
+                </button>
+            </div>
+
+        </div>
+
+    </div>
+
+    <script>
+        // Global App State
+        let currentPlatform = 'COLDBET';
+        let activeGame = null;
+
+        // Interactive Snow Canvas Rendering Physics
+        const canvas = document.getElementById('snow-canvas');
+        const ctx = canvas.getContext('2d');
+        let width = canvas.width = window.innerWidth;
+        let height = canvas.height = window.innerHeight;
+
+        window.addEventListener('resize', () => {
+            width = canvas.width = window.innerWidth;
+            height = canvas.height = window.innerHeight;
+        });
+
+        const flakes = [];
+        for (let i = 0; i < 90; i++) {
+            flakes.push({
+                x: Math.random() * width,
+                y: Math.random() * height,
+                r: Math.random() * 3 + 1,
+                speedY: Math.random() * 1.5 + 0.7,
+                speedX: Math.random() * 2 + 1, // Cold blizzard wind sweep
+                opacity: Math.random() * 0.8 + 0.2
+            });
+        }
+
+        function renderCanvas() {
+            ctx.clearRect(0, 0, width, height);
+            
+            for (let f of flakes) {
+                ctx.beginPath();
+                ctx.arc(f.x, f.y, f.r, 0, Math.PI * 2);
+                
+                if (currentPlatform === 'COLDBET') {
+                    ctx.fillStyle = `rgba(224, 242, 254, ${f.opacity})`;
+                    ctx.shadowBlur = 8;
+                    ctx.shadowColor = '#00f2fe';
+                } else {
+                    ctx.fillStyle = `rgba(187, 247, 208, ${f.opacity * 0.7})`;
+                    ctx.shadowBlur = 0;
+                }
+                
+                ctx.fill();
+
+                f.y += f.speedY;
+                f.x += f.speedX;
+
+                if (f.y > height || f.x > width) {
+                    f.y = -10;
+                    f.x = Math.random() * width - 100;
+                }
+            }
+            requestAnimationFrame(renderCanvas);
+        }
+        renderCanvas();
+
+        // Platform Switcher Handler
+        function selectPlatform(platform) {
+            currentPlatform = platform;
+            const body = document.getElementById('body-main');
+            const loginCard = document.getElementById('login-card');
+            const btnCold = document.getElementById('btn-switch-coldbet');
+            const btnLine = document.getElementById('btn-switch-linebet');
+            const radioCold = document.getElementById('radio-cold');
+            const radioLine = document.getElementById('radio-line');
+            const promoVal = document.getElementById('promo-val');
+            const btnSubmit = document.getElementById('btn-login-submit');
+
+            if (platform === 'COLDBET') {
+                body.className = "bg-cold-bg text-slate-100 min-h-screen";
+                loginCard.className = "cyber-card-cold rounded-2xl p-5 space-y-5 transition-all";
+                promoVal.textContent = "MUZZ";
+
+                btnCold.className = "p-3 rounded-xl border-2 border-sky-400 bg-sky-500/10 text-sky-300 font-bold font-orbitron text-xs flex items-center justify-center space-x-2 transition";
+                btnLine.className = "p-3 rounded-xl border border-slate-800 bg-slate-950/50 text-slate-400 font-bold font-orbitron text-xs flex items-center justify-center space-x-2 transition";
+                
+                radioCold.className = "fa-solid fa-circle-dot text-sky-400";
+                radioLine.className = "fa-regular fa-circle text-slate-600";
+
+                btnSubmit.className = "w-full py-3.5 rounded-xl font-orbitron font-extrabold text-sm uppercase tracking-wider text-white btn-cold-glow flex items-center justify-center space-x-2 mt-2";
+            } else {
+                body.className = "bg-linebet-bg text-slate-100 min-h-screen";
+                loginCard.className = "cyber-card-linebet rounded-2xl p-5 space-y-5 transition-all";
+                promoVal.textContent = "BE127";
+
+                btnLine.className = "p-3 rounded-xl border-2 border-emerald-400 bg-emerald-500/10 text-emerald-300 font-bold font-orbitron text-xs flex items-center justify-center space-x-2 transition";
+                btnCold.className = "p-3 rounded-xl border border-slate-800 bg-slate-950/50 text-slate-400 font-bold font-orbitron text-xs flex items-center justify-center space-x-2 transition";
+                
+                radioLine.className = "fa-solid fa-circle-dot text-emerald-400";
+                radioCold.className = "fa-regular fa-circle text-slate-600";
+
+                btnSubmit.className = "w-full py-3.5 rounded-xl font-orbitron font-extrabold text-sm uppercase tracking-wider text-white btn-linebet-glow flex items-center justify-center space-x-2 mt-2";
+            }
+        }
+
+        // Copy Promo Code
+        function copyPromo() {
+            const promo = currentPlatform === 'COLDBET' ? 'MUZZ' : 'BE127';
+            const temp = document.createElement("input");
+            document.body.appendChild(temp);
+            temp.value = promo;
+            temp.select();
+            document.execCommand("copy");
+            document.body.removeChild(temp);
+
+            showToast("Promokod nusxalandi: " + promo);
+        }
+
+        function showToast(msg) {
+            const toast = document.getElementById('toast');
+            document.getElementById('toast-msg').textContent = msg;
+            toast.classList.remove('hidden');
+            toast.classList.add('toast-show');
+            setTimeout(() => {
+                toast.classList.remove('toast-show');
+                toast.classList.add('hidden');
+            }, 2400);
+        }
+
+        // Login Validation
+        function performLogin() {
+            const idVal = document.getElementById('input-id').value.trim();
+            const keyVal = document.getElementById('input-key').value.trim().toUpperCase();
+
+            const errId = document.getElementById('error-id');
+            const errKey = document.getElementById('error-key');
+
+            let isValid = true;
+
+            if (!idVal || idVal.length < 5) {
+                errId.classList.remove('hidden');
+                isValid = false;
+            } else {
+                errId.classList.add('hidden');
+            }
+
+            const expectedKey = currentPlatform === 'COLDBET' ? 'MUZZ' : 'BE127';
+            if (!keyVal || keyVal !== expectedKey) {
+                errKey.classList.remove('hidden');
+                isValid = false;
+            } else {
+                errKey.classList.add('hidden');
+            }
+
+            if (isValid) {
+                document.getElementById('screen-login').classList.add('hidden');
+                document.getElementById('screen-dashboard').classList.remove('hidden');
+
+                document.getElementById('dash-platform-title').textContent = currentPlatform;
+                document.getElementById('dash-platform-title').className = currentPlatform === 'COLDBET'
+                    ? "font-orbitron font-black text-sm text-cyan-400 tracking-wider"
+                    : "font-orbitron font-black text-sm text-emerald-400 tracking-wider";
+
+                document.getElementById('dash-promo-code').textContent = expectedKey;
+                showToast("Xavfsiz kirish muvaffaqiyatli!");
+            }
+        }
+
+        function logout() {
+            document.getElementById('screen-dashboard').classList.add('hidden');
+            document.getElementById('screen-game').classList.add('hidden');
+            document.getElementById('screen-login').classList.remove('hidden');
+        }
+
+        // Open Game Playground
+        function openGame(gameKey) {
+            activeGame = gameKey;
+            document.getElementById('screen-dashboard').classList.add('hidden');
+            document.getElementById('screen-game').classList.remove('hidden');
+
+            const playground = document.getElementById('game-playground');
+            const title = document.getElementById('game-title');
+            const btnGen = document.getElementById('btn-generate-signal');
+
+            btnGen.className = currentPlatform === 'COLDBET'
+                ? "w-full py-4 rounded-xl font-orbitron font-extrabold text-sm tracking-wider text-white btn-cold-glow uppercase flex items-center justify-center space-x-2"
+                : "w-full py-4 rounded-xl font-orbitron font-extrabold text-sm tracking-wider text-white btn-linebet-glow uppercase flex items-center justify-center space-x-2";
+
+            playground.innerHTML = '';
+
+            if (gameKey === 'apple') {
+                title.textContent = "APPLE OF FORTUNE 🍎";
+                renderAppleView(playground);
+            } else if (gameKey === 'thimbles') {
+                title.textContent = "THIMBLES 🔔";
+                renderThimblesView(playground);
+            } else if (gameKey === 'mines') {
+                title.textContent = "MINES 💎";
+                renderMinesView(playground);
+            } else if (gameKey === 'wwg') {
+                title.textContent = "WILD WEST GOLD 🤠";
+                renderWWGView(playground);
+            } else if (gameKey === 'kamikaze') {
+                title.textContent = "KAMIKAZE ✈️";
+                renderKamikazeView(playground);
+            } else if (gameKey === 'swamp') {
+                title.textContent = "SWAMP LAND 🐸";
+                renderSwampView(playground);
+            } else if (gameKey === 'aviator') {
+                title.textContent = "AVIATOR PREDICTOR ✈️";
+                renderAviatorView(playground);
+            }
+        }
+
+        function closeGame() {
+            document.getElementById('screen-game').classList.add('hidden');
+            document.getElementById('screen-dashboard').classList.remove('hidden');
+        }
+
+        // 1. APPLE OF FORTUNE (507_2.jpg design with exact multipliers)
+        function renderAppleView(container) {
+            const multipliers = ['x 6.71', 'x 4.02', 'x 2.41', 'x 1.93', 'x 1.54', 'x 1.23'];
+            container.innerHTML = `
+                <div class="w-full cyber-card-cold rounded-2xl p-4 space-y-3 text-center">
+                    <div class="text-amber-400 font-orbitron font-bold text-xs">
+                        Apple of Fortune
+                    </div>
+
+                    <div class="space-y-2 p-2 bg-slate-950/80 rounded-xl border border-slate-800">
+                        ${[5, 4, 3, 2, 1, 0].map(row => `
+                            <div class="flex items-center justify-between space-x-2">
+                                <div class="px-2 py-1 rounded-lg bg-emerald-950/80 border border-emerald-500/40 text-emerald-400 font-orbitron font-extrabold text-[10px] w-14 text-center">
+                                    ${multipliers[5 - row]}
+                                </div>
+                                <div class="grid grid-cols-5 gap-1.5 flex-1">
+                                    ${[0, 1, 2, 3, 4].map(col => `
+                                        <div id="cell-apple-${row}-${col}" class="h-9 rounded-lg bg-slate-900 border border-slate-800 flex items-center justify-center text-base transition-all">
+                                            🍏
+                                        </div>
+                                    `).join('')}
+                                </div>
+                            </div>
+                        `).join('')}
+                    </div>
+                </div>
+            `;
+        }
+
+        // 2. THIMBLES
+        let thimMode = '2.91';
+        function renderThimblesView(container) {
+            container.innerHTML = `
+                <div class="w-full cyber-card-cold rounded-2xl p-4 space-y-4 text-center">
+                    <div class="flex rounded-xl bg-slate-950 p-1 border border-slate-800">
+                        <button id="th-145" onclick="thimMode='1.45'; updateThimBtns();" class="flex-1 py-2 rounded-lg text-xs font-bold font-orbitron text-slate-400">1.45x (2 shar)</button>
+                        <button id="th-291" onclick="thimMode='2.91'; updateThimBtns();" class="flex-1 py-2 rounded-lg text-xs font-bold font-orbitron bg-sky-500 text-white">2.91x (1 shar)</button>
+                    </div>
+
+                    <div class="grid grid-cols-3 gap-3 py-4">
+                        <div id="cup-1" class="h-24 rounded-2xl bg-gradient-to-t from-amber-600 to-orange-500 border-2 border-amber-400/50 flex items-center justify-center font-black font-orbitron text-xl text-white">1</div>
+                        <div id="cup-2" class="h-24 rounded-2xl bg-gradient-to-t from-amber-600 to-orange-500 border-2 border-amber-400/50 flex items-center justify-center font-black font-orbitron text-xl text-white">2</div>
+                        <div id="cup-3" class="h-24 rounded-2xl bg-gradient-to-t from-amber-600 to-orange-500 border-2 border-amber-400/50 flex items-center justify-center font-black font-orbitron text-xl text-white">3</div>
+                    </div>
+                </div>
+            `;
+        }
+
+        function updateThimBtns() {
+            document.getElementById('th-145').className = thimMode === '1.45' ? "flex-1 py-2 rounded-lg text-xs font-bold font-orbitron bg-sky-500 text-white" : "flex-1 py-2 rounded-lg text-xs font-bold font-orbitron text-slate-400";
+            document.getElementById('th-291').className = thimMode === '2.91' ? "flex-1 py-2 rounded-lg text-xs font-bold font-orbitron bg-sky-500 text-white" : "flex-1 py-2 rounded-lg text-xs font-bold font-orbitron text-slate-400";
+        }
+
+        // 3. MINES
+        let minesCount = 3;
+        function renderMinesView(container) {
+            container.innerHTML = `
+                <div class="w-full cyber-card-cold rounded-2xl p-4 space-y-3 text-center">
+                    <div class="flex items-center justify-between px-1">
+                        <span class="text-xs font-bold text-slate-300">Minalar:</span>
+                        <select onchange="minesCount = parseInt(this.value)" class="bg-slate-900 border border-slate-700 text-sky-400 text-xs rounded-lg px-2.5 py-1 font-bold outline-none">
+                            <option value="1">1 Mina 💣</option>
+                            <option value="3" selected>3 Mina 💣</option>
+                            <option value="5">5 Mina 💣</option>
+                        </select>
+                    </div>
+
+                    <div class="grid grid-cols-5 gap-1.5 p-2 bg-slate-950/80 rounded-xl border border-slate-800">
+                        ${Array(25).fill(0).map((_, i) => `
+                            <div id="cell-mine-${i}" class="aspect-square rounded-lg bg-sky-600/30 border border-sky-400/30 flex items-center justify-center text-lg"></div>
+                        `).join('')}
+                    </div>
+                </div>
+            `;
+        }
+
+        // 4. WILD WEST GOLD
+        let wwgCols = 2;
+        function renderWWGView(container) {
+            container.innerHTML = `
+                <div class="w-full bg-gradient-to-b from-amber-900/60 to-amber-950/80 border border-amber-600/40 rounded-2xl p-4 space-y-3 text-center">
+                    <div class="flex justify-center space-x-2">
+                        <button onclick="wwgCols=2; renderWWGGrid();" class="px-4 py-1 rounded-t-lg bg-amber-200 text-amber-950 font-black font-orbitron text-xs">2x</button>
+                        <button onclick="wwgCols=3; renderWWGGrid();" class="px-4 py-1 rounded-t-lg bg-amber-900/50 text-amber-200 font-black font-orbitron text-xs">3x</button>
+                    </div>
+
+                    <div id="wwg-box" class="space-y-1.5 bg-amber-100/20 p-2.5 rounded-xl border border-amber-700/30"></div>
+                </div>
+            `;
+            renderWWGGrid();
+        }
+
+        function renderWWGGrid() {
+            const box = document.getElementById('wwg-box');
+            box.innerHTML = Array(6).fill(0).map((_, row) => `
+                <div class="grid grid-cols-${wwgCols} gap-2">
+                    ${Array(wwgCols).fill(0).map((_, col) => `
+                        <div id="cell-wwg-${row}-${col}" class="h-9 rounded-lg bg-amber-200/50 border border-amber-600/30 flex items-center justify-center"></div>
+                    `).join('')}
+                </div>
+            `).join('');
+        }
+
+        // 5. KAMIKAZE
+        function renderKamikazeView(container) {
+            const mults = ['x2.5', 'x2', 'x1.6', 'x1.4', 'x1.2'];
+            container.innerHTML = `
+                <div class="w-full bg-slate-900/90 border border-cyan-500/30 rounded-2xl p-4 space-y-3">
+                    <div class="flex items-center space-x-2">
+                        <div class="flex-1 space-y-1.5">
+                            ${[4, 3, 2, 1, 0].map(row => `
+                                <div class="grid grid-cols-5 gap-1.5">
+                                    ${[0, 1, 2, 3, 4].map(col => `
+                                        <div id="cell-kami-${row}-${col}" class="aspect-square rounded-md bg-cyan-900/30 border border-cyan-500/30 flex items-center justify-center text-sm"></div>
+                                    `).join('')}
+                                </div>
+                            `).join('')}
+                        </div>
+                        <div class="flex flex-col justify-between py-0.5 space-y-1.5">
+                            ${mults.map(m => `
+                                <div class="px-2 py-1.5 bg-slate-950 border border-cyan-500/40 text-cyan-300 font-orbitron font-bold text-[10px] rounded text-center">
+                                    ${m}
+                                </div>
+                            `).join('')}
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
+
+        // 6. SWAMP LAND
+        function renderSwampView(container) {
+            const mults = ['x 27.16', 'x 5.43', 'x 2.17', 'x 1.3'];
+            container.innerHTML = `
+                <div class="w-full bg-gradient-to-b from-sky-600/40 to-blue-900/50 border border-sky-400/40 rounded-2xl p-4 space-y-3 text-center">
+                    <div class="space-y-2">
+                        ${[3, 2, 1, 0].map(row => `
+                            <div class="flex items-center justify-between">
+                                <div class="grid grid-cols-5 gap-1.5 flex-1 mr-3">
+                                    ${[0, 1, 2, 3, 4].map(col => `
+                                        <div id="cell-swamp-${row}-${col}" class="w-9 h-9 mx-auto rounded-full bg-emerald-600/60 border-2 border-emerald-400 flex items-center justify-center text-sm">
+                                            <div class="w-2.5 h-2.5 rounded-full bg-emerald-300/40"></div>
+                                        </div>
+                                    `).join('')}
+                                </div>
+                                <span class="text-[10px] font-black font-orbitron text-white">${mults[3 - row]}</span>
+                            </div>
+                        `).join('')}
+                    </div>
+                </div>
+            `;
+        }
+
+        // 7. AVIATOR PREDICTOR
+        function renderAviatorView(container) {
+            container.innerHTML = `
+                <div class="w-full bg-gradient-to-b from-slate-900 to-red-950/50 rounded-2xl p-6 border border-red-500/40 text-center space-y-5">
+                    <div class="text-4xl">✈️</div>
+                    <div>
+                        <div class="text-[10px] text-slate-400 font-bold uppercase tracking-wider">Kutilayotgan Koeffitsient</div>
+                        <div id="aviator-val" class="text-4xl font-black font-orbitron text-red-500 tracking-wider my-2">x1.00</div>
+                    </div>
+                    <div class="w-full bg-slate-950 rounded-full h-2.5 overflow-hidden border border-slate-800">
+                        <div id="aviator-bar" class="bg-gradient-to-r from-red-600 to-rose-400 h-full w-0 transition-all"></div>
+                    </div>
+                </div>
+            `;
+        }
+
+        // TRIGGER SIGNAL GENERATION
+        function triggerSignal() {
+            const btn = document.getElementById('btn-generate-signal');
+            btn.disabled = true;
+            btn.innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i> <span>TAHLIL QILINMOQDA...</span>`;
+
+            setTimeout(() => {
+                btn.disabled = false;
+                btn.innerHTML = `<i class="fa-solid fa-bolt"></i> <span>SIGNAL OLISH</span>`;
+
+                if (activeGame === 'apple') {
+                    for (let r = 0; r < 6; r++) {
+                        for (let c = 0; c < 5; c++) {
+                            const cell = document.getElementById(`cell-apple-${r}-${c}`);
+                            cell.className = "h-9 rounded-lg bg-slate-900 border border-slate-800 flex items-center justify-center text-base transition-all";
+                            cell.innerHTML = "🍏";
+                        }
+                    }
+                    for (let r = 0; r < 6; r++) {
+                        const winC = Math.floor(Math.random() * 5);
+                        const cell = document.getElementById(`cell-apple-${r}-${winC}`);
+                        cell.className += " signal-win bg-emerald-500/30 border-emerald-400 text-lg";
+                        cell.innerHTML = "🍎";
+                    }
+                } else if (activeGame === 'thimbles') {
+                    [1, 2, 3].forEach(id => {
+                        const cup = document.getElementById(`cup-${id}`);
+                        cup.className = "h-24 rounded-2xl bg-gradient-to-t from-amber-600 to-orange-500 border-2 border-amber-400/50 flex items-center justify-center font-black font-orbitron text-xl text-white";
+                        cup.innerHTML = `${id}`;
+                    });
+                    if (thimMode === '2.91') {
+                        const winId = Math.floor(Math.random() * 3) + 1;
+                        const cup = document.getElementById(`cup-${winId}`);
+                        cup.className += " signal-win bg-gradient-to-t from-emerald-600 to-teal-500";
+                        cup.innerHTML = "⚽";
+                    } else {
+                        let c1 = Math.floor(Math.random() * 3) + 1;
+                        let c2 = (c1 % 3) + 1;
+                        [c1, c2].forEach(id => {
+                            const cup = document.getElementById(`cup-${id}`);
+                            cup.className += " signal-win bg-gradient-to-t from-emerald-600 to-teal-500";
+                            cup.innerHTML = "⚽";
+                        });
+                    }
+                } else if (activeGame === 'mines') {
+                    for (let i = 0; i < 25; i++) {
+                        const cell = document.getElementById(`cell-mine-${i}`);
+                        cell.className = "aspect-square rounded-lg bg-sky-600/30 border border-sky-400/30 flex items-center justify-center text-lg";
+                        cell.innerHTML = "";
+                    }
+                    let safeCount = minesCount === 1 ? 5 : (minesCount === 3 ? 4 : 3);
+                    let chosen = new Set();
+                    while (chosen.size < safeCount) chosen.add(Math.floor(Math.random() * 25));
+                    chosen.forEach(i => {
+                        const cell = document.getElementById(`cell-mine-${i}`);
+                        cell.className += " signal-win bg-amber-500/30 border-amber-400";
+                        cell.innerHTML = "⭐";
+                    });
+                } else if (activeGame === 'wwg') {
+                    for (let r = 0; r < 6; r++) {
+                        for (let c = 0; c < wwgCols; c++) {
+                            const cell = document.getElementById(`cell-wwg-${r}-${c}`);
+                            cell.className = "h-9 rounded-lg bg-amber-200/50 border border-amber-600/30 flex items-center justify-center";
+                            cell.innerHTML = "";
+                        }
+                    }
+                    for (let r = 0; r < 6; r++) {
+                        const winC = Math.floor(Math.random() * wwgCols);
+                        const cell = document.getElementById(`cell-wwg-${r}-${winC}`);
+                        cell.className += " signal-win bg-emerald-400 text-slate-950 font-bold";
+                        cell.innerHTML = "💰";
+                    }
+                } else if (activeGame === 'kamikaze') {
+                    for (let r = 0; r < 5; r++) {
+                        for (let c = 0; c < 5; c++) {
+                            const cell = document.getElementById(`cell-kami-${r}-${c}`);
+                            cell.className = "aspect-square rounded-md bg-cyan-900/30 border border-cyan-500/30 flex items-center justify-center text-sm";
+                            cell.innerHTML = "";
+                        }
+                    }
+                    for (let r = 0; r < 5; r++) {
+                        const winC = Math.floor(Math.random() * 5);
+                        const cell = document.getElementById(`cell-kami-${r}-${winC}`);
+                        cell.className += " signal-win bg-emerald-500/40";
+                        cell.innerHTML = "✈️";
+                    }
+                } else if (activeGame === 'swamp') {
+                    for (let r = 0; r < 4; r++) {
+                        for (let c = 0; c < 5; c++) {
+                            const pad = document.getElementById(`cell-swamp-${r}-${c}`);
+                            pad.className = "w-9 h-9 mx-auto rounded-full bg-emerald-600/60 border-2 border-emerald-400 flex items-center justify-center text-sm";
+                            pad.innerHTML = `<div class="w-2.5 h-2.5 rounded-full bg-emerald-300/40"></div>`;
+                        }
+                    }
+                    for (let r = 0; r < 4; r++) {
+                        const winC = Math.floor(Math.random() * 5);
+                        const pad = document.getElementById(`cell-swamp-${r}-${winC}`);
+                        pad.className += " signal-win bg-yellow-400 text-slate-900 font-bold";
+                        pad.innerHTML = "👣";
+                    }
+                } else if (activeGame === 'aviator') {
+                    const cVal = (Math.random() * (4.80 - 1.25) + 1.25).toFixed(2);
+                    document.getElementById('aviator-val').textContent = `x${cVal}`;
+                    const bar = document.getElementById('aviator-bar');
+                    bar.style.width = '0%';
+                    setTimeout(() => bar.style.width = '100%', 50);
+                }
+
+                showToast("Yangi signal olindi!");
+            }, 750);
+        }
+    </script>
+</body>
+</html>
